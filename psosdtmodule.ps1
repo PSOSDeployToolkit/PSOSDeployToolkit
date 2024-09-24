@@ -36,7 +36,7 @@ function Get-OSDComputerSystem {
     }
 }
 
-function Test-HPBIOSWMIInterface	{
+function Test-HPBIOSWMIInterface {
     [CmdletBinding()]
     Param (
         $MaxWaitSeconds = 180
@@ -49,10 +49,10 @@ function Test-HPBIOSWMIInterface	{
     } 
     while ((!($HP_BIOSSettingInterface = Get-WmiObject @GWMIParms -ErrorAction SilentlyContinue)) -and $int -lt $MaxWaitSeconds ) { 
         "$FName`: Waiting up to $MaxWaitSeconds seconds for HP BIOS WMI interface: $int" 
-        Start-Sleep -Seconds 1 
-        $int += 1 
-    } 
-    if ($int -ge $MaxWaitSeconds) { 
+        Start-Sleep -Seconds 1
+        $int += 1
+    }
+    if ($int -ge $MaxWaitSeconds) {
         "$FName`: HP BIOS WMI Interface did not load in $MaxWaitSeconds"
         RETURN $false
     }
