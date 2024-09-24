@@ -1,10 +1,11 @@
 $PSOSDTModule = @'
+
 function helloOSD {
   "Hello from PSOSDTModule!"
 }
 
 function Get-OSDTSEnvironment {
-$Script:TSEnv = New-Object -ComObject Microsoft.SMS.TSEnvironment
+  $Script:TSEnv = New-Object -ComObject Microsoft.SMS.TSEnvironment
 }
 
 function Get-OSDVariable {
@@ -12,7 +13,16 @@ function Get-OSDVariable {
     [Parameter(Mandatory = $True)]$Name
   )
   if ( ! $TSEnv ) { Get-OSDTSEnvironment }
-  $TSEnv.value($Name)
+  $TSEnv.value("$Name")
+}
+
+function Set-OSDVariable {
+  param (
+    [Parameter(Mandatory = $True)]$Name ,
+    [Parameter(Mandatory = $True)]$Value
+  )
+  if ( ! $TSEnv ) { Get-OSDTSEnvironment }
+  $TSEnv.value("$Name") = "$Value"
 }
 
 '@
