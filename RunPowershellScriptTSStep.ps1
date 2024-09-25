@@ -13,6 +13,7 @@ Get-OSDVariable -Name 'MyVar'
 Get-OSDComputerSystem
 $Manufacturer
 $Model
+Get-OSDVariable -Name '_SMSTSModel'
 if ( $Manufacturer -in 'hp','hewlett packard' ) { Test-HPBIOSWMIInterface }
 
 # Wait awhile to open CMTrace and view results
