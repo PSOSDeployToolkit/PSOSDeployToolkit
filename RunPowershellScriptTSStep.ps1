@@ -13,7 +13,7 @@ Get-OSDVariable -Name 'MyVar'
 Get-OSDComputerSystem
 $Manufacturer
 $Model
-if ( $Manufacturer -in 'hp','hewlett packard' ) { Test-HPBIOWMIInterface }
+if ( $Manufacturer -in 'hp','hewlett packard' ) { Test-HPBIOSWMIInterface }
 
 # Wait awhile to open CMTrace and view results
 Start-Sleep -Seconds 30000
