@@ -60,6 +60,77 @@ function Test-HPBIOSWMIInterface {
         Return $true
     }
 }
+
+function Show-OSDPopup {
+    [CmdletBinding()]
+    Param (
+        [ValidateNotNullOrEmpty()]
+        [String] 
+        $title = 'Operating System Deployment Condition Check',
+
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $message = 'Click [Ok] to continue OR [Cancel] to quit.',
+
+        [ValidateSet("Asterisk", "Error", "Exclamation", "Hand", "Information", "None", "Question", "Stop", "Warning")]
+        [String]
+        $type = "Information",
+
+        [ValidateSet("AbortRetryIgnore", "OK", "OKCancel", "RetryCancel", "YesNo", "YesNoCancel")]
+        $buttons = "OKCancel",
+
+        [ValidateSet("Button1","Button2","Button3")]
+        $DefaultButton = "Button1",
+        
+        [switch] $ShutdownOnAbort,
+        [switch] $RestartOnAbort,
+
+        [switch] $ShutdownOnNo,
+        [switch] $RestartOnNo,
+
+        [switch] $ShutdownOnCancel,
+        [switch] $RestartOnCancel,
+
+        [switch] $ShutdownOnOk,
+        [switch] $RestartOnOk
+    )
+    $FName = $MyInvocation.MyCommand.Name
+    "$FName`: Testing if in WindowsPE. If so, hide the OSD Progress window."
+    if ( Get-OSDVariable -Name '_SMSTSInWinPE' ) {
+        "$FName`: Is running in WinPE. Closing Task Sequence Progress Window if running."
+        (New-Object -ComObject Microsoft.SMS.TsProgressUI).CloseProgressDialog() | Out-Null
+    }
+    "$FName`: Popup:$title;$message;$buttons"
+    "$FName`: Display form and get user selection" | Write-Verbose
+    [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null
+    $Result = [Windows.Forms.MessageBox]::Show($message, $title, [Windows.Forms.MessageBoxButtons]::$buttons ,[Windows.Forms.MessageBoxIcon]::$type ,[Windows.Forms.MessageBoxDefaultButton]::$DefaultButton )
+
+    # Reboot or shutdown if needed or just return user result
+    switch ($Result) {
+        { 
+            ($Result -eq 'Abort' -and $RestartOnAbort) -or
+            ($Result -eq 'Cancel' -and $RestartOnCancel) -or
+            ($Result -eq 'No' -and $RestartOnNo) -or
+            ($Result -eq 'Ok' -and $RestartOnOk)
+        } { 
+            "$FName`: Restarting Computer"
+            Restart-Computer -Force
+            Start-Sleep -Seconds 60
+        }
+        { 
+            ($Result -eq 'Abort' -and $ShutdownOnAbort) -or
+            ($Result -eq 'Cancel' -and $ShutdownOnCancel) -or
+            ($Result -eq 'No' -and $ShutdownOnNo) -or
+            ($Result -eq 'Ok' -and $ShutdownOnOk)
+        } {
+            "$FName`: Shutting down computer"
+            Stop-Computer -Force
+            Start-Sleep -Seconds 60
+        }
+        Default { RETURN $Result }
+    }
+}
+
 '@
 
 $TSEnv = New-Object -ComObject Microsoft.SMS.TSEnvironment
