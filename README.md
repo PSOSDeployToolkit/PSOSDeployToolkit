@@ -12,23 +12,28 @@ Neither this project or I am in any way affiliated with Microsoft.
 ### Resources:
 - [Task sequence variables](https://learn.microsoft.com/en-us/mem/configmgr/osd/understand/task-sequence-variables)
 
+### Prerequisites
+- PowerShell support enabled boot image
+
 ## Instructions
 
-### Enable Powershell support in your OS Deployment boot image if needed.
+### If Needed: Add Powershell Optional Components to your OS Deployment boot image.
 > [!WARNING]
-> Following these steps will require redistribution of your OS Deployment boot image to distribution points and recreation of all associated physical OS Deployment boot media.
-> Do not perform these steps on a boot image that is being used in production environments without coordinating all required efforts to recreate all exiting physical boot media.
+> These steps require redistribution of your OS Deployment boot image and recreation of all associated physical OS Deployment boot media.
+> Do not perform these steps on production boot images without coordinating efforts required to recreate all exiting physical boot media.
 > You have been warned.
 
 1. Open Configuration Manager Console:
 1. Navigate to Software Distribution > Operating Systems > Boot Images.
 1. Right-click the your boot image and choose Properties.
 1. Switch to the "Optional Components" tab.
-1. Click on Add and select "Windows PowerShell (WinPE-Powershell)" from the list of available components.
+1. Click on the Add (star icon) and select "Windows PowerShell (WinPE-Powershell)".
 > [!NOTE]
-> When you select this option you may be prompted to add prerequisite components. Confirm the prompt to add them if presented.
+> You may be prompted to install additional prerequisites. Click Yes if prompted.
 1. Click OK to close the properties window.
-1. You may want to right-click the boot image again and select Update Distribution Points to ensure that all changes are applied.
+1. Click Yes when prompted to redistribute your boot image.
+> [!NOTE]
+> Do not check the option "Reload this boot image with the current Windows PE version from the Windows ADK" if your current boot image was generated with the MDT Boot Image Wizard. It will remove all customizations provided by MDT.
 
 ### Enable PSOSDT in your Task Sequence.
 1. Open existing Operating System Deployment Task sequence.
