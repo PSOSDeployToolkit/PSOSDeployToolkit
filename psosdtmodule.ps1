@@ -131,7 +131,37 @@ function Show-OSDPopup {
     }
 }
 
+function Test-OSDMinRAM {
+    param (
+        [int]$MinRAMinGB
+    )
+    (Get-CimInstance -ClassName CIM_PhysicalMemory).Capacity / 1GB -ge $MinRAMinGB
+}
+
+function Test-OSDMinCPUinGHz {
+    param (
+        [int]$MinCPUGhz = 4
+    )
+    $CPUMax = (Get-CimInstance -ClassName CIM_Processor).MaxClockSpeed | Sort-Object -Descending | Select-Object -First 1
+    [math]::Floor($CPUMax / 1024) -ge $MinCPUGhz
+}
+
+function Test-OSDMinDiskinGB {
+    param (
+        [int]$MinDiskinGB = 128
+    )
+    [bool]$(Get-PhysicalDisk | Where-Object { 
+        $_.Size -ge "$($MinDiskinGB)GB" -and 
+        $_.SpindleSpeed -eq 0 -and 
+        $_.BusType -notin "USB",7 
+    })
+}
+
 '@
 
+
+# Output to OSD Variable accessible throughout the whole task sequence
 $TSEnv = New-Object -ComObject Microsoft.SMS.TSEnvironment
 $TSEnv.value('PSOSDTModule') = $PSOSDTModule
+# Output to X: RAMDrive in WinPE for script development with Import-Module cmdlet
+$PSOSDTModule | Out-File x:\PSOSDT.psm1
