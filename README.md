@@ -1,3 +1,6 @@
+# STATUS: WORK IN PROGRESS
+Very alpha
+
 # PSOSDeployToolkit
 PowerShell Operating System Deployment Toolkit (PSOSDT)
 
