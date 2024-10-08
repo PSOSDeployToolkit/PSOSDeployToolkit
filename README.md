@@ -30,7 +30,7 @@ Neither this project or I am in any way affiliated with Microsoft.
 1. Click on the Add (star icon) and select "Windows PowerShell (WinPE-Powershell)".
 > [!NOTE]
 > You may be prompted to install additional prerequisites. Click Yes if prompted.
-5. Click OK to close the properties window.
+6. Click OK to close the properties window.
 1. Click Yes when prompted to redistribute your boot image.
 > [!NOTE]
 > Do not check the option "Reload this boot image with the current Windows PE version from the Windows ADK" if your current boot image was generated with the MDT Boot Image Wizard. It will remove all customizations provided by MDT.
