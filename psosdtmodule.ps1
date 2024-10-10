@@ -1,33 +1,21 @@
 $PSOSDTModule = @'
 
-function helloOSD
+function Test-PSOSDT
 {
-  "Hello from PSOSDTModule!"
+  "Hello from PSOSDT Module !"
 }
 
 function Get-OSDTSEnvironment
 {
   $Script:TSEnv = New-Object -ComObject Microsoft.SMS.TSEnvironment
-  $FName = $MyInvocation.MyCommand.Name ; $FName
+  $FName = $MyInvocation.MyCommand.Name
 }
 
 function Get-OSDVariable
 {
   param (
-    [Parameter(Mandatory = $True)]$Name
-  )
-  $FName = $MyInvocation.MyCommand.Name ; $FName
-  if ( ! $TSEnv )
-  { Get-OSDTSEnvironment 
-  }
-  $TSEnv.value("$Name")
-}
-
-function Get-OSDVariablev2
-{
-  param (
     $Name,
-    [switch]$GetAll ,
+    [switch]$OutputToPSVarOnly ,
     [array]$SkipVars = ("AuthToken", "certificate", "certs", "clientconfig", 
       "crypto", "PSModule", "password", "MediaPFX", "policy", 
       "PowerShellScriptSourceScript", "reserved", "RootKey", 
@@ -37,7 +25,7 @@ function Get-OSDVariablev2
       "_SMSTSTaskSequence", "_SMSTSRoot", "SvcPW", "_TSSub", "tasksequence", 
       "UATTesters" )
   )
-  $FName = $MyInvocation.MyCommand.Name ; $FName
+  $FName = $MyInvocation.MyCommand.Name
 
   if ( ! $TSEnv )
   { Get-OSDTSEnvironment 
@@ -45,18 +33,26 @@ function Get-OSDVariablev2
 
   if ( ! $Name)
   {
-    $TSenv.GetVariables() 
+    $Name = $TSenv.GetVariables() 
   }
 
   foreach ($var in $Name)
   {
+    $output = $true
     foreach ($skipVar in $skipVars)
     {
-      if ( $var -notlike "*$skipVar*" )
+      if ( $var -like "*$skipVar*" )
       { 
-        $TSEnv.value("$var")
+        $output = $false
       }
     }
+      if ( $output ) {
+        $Value = $TSEnv.value("$var")
+          New-Variable -Name $var -Value $Value -Scope Global -Description 'PSOSDT' -ErrorAction SilentlyContinue -Force
+        if (! $OutputToPSVarOnly) {
+          Get-Variable -Name $var -ValueOnly
+        }
+      }
   }
 }
 
@@ -66,19 +62,21 @@ function Set-OSDVariable
     [Parameter(Mandatory = $True)]$Name ,
     [Parameter(Mandatory = $True)]$Value
   )
-  $FName = $MyInvocation.MyCommand.Name ; $FName
+  $FName = $MyInvocation.MyCommand.Name
   if ( ! $TSEnv )
-  { Get-OSDTSEnvironment 
+  {
+    Get-OSDTSEnvironment 
   }
   $TSEnv.value("$Name") = "$Value"
+  New-Variable -Name $Name -Value $Value -Scope Global
 }
 
 function Get-OSDComputerSystem
 {
-  $FName = $MyInvocation.MyCommand.Name ; $FName
+  $FName = $MyInvocation.MyCommand.Name
   "$FName`: Creating computer system properties as standard variables"
   (Get-CimInstance -ClassName Win32_ComputerSystem).PSObject.Members | ForEach-Object { 
-    New-Variable -Name $_.Name -Value $_.value -Scope Script
+    New-Variable -Name $_.Name -Value $_.value -Scope Global
   }
 }
 
@@ -88,7 +86,7 @@ function Test-HPBIOSWMIInterface
   Param (
     $MaxWaitSeconds = 180
   ) 
-  $FName = $MyInvocation.MyCommand.Name ; $FName
+  $FName = $MyInvocation.MyCommand.Name
   $int = 0
   $GWMIParms = @{
     'Namespace' = 'root/HP/InstrumentedBIOS'
@@ -116,18 +114,18 @@ function Show-OSDPopup
   Param (
     [ValidateNotNullOrEmpty()]
     [String] 
-    $title = 'Operating System Deployment Condition Check',
+    $Title = 'Operating System Deployment Condition Check',
 
     [ValidateNotNullOrEmpty()]
     [string]
-    $message = 'Click [Ok] to continue OR [Cancel] to quit.',
+    $Message = 'Click [Ok] to continue OR [Cancel] to quit.',
 
     [ValidateSet("Asterisk", "Error", "Exclamation", "Hand", "Information", "None", "Question", "Stop", "Warning")]
     [String]
-    $type = "Information",
+    $Type = "Information",
 
     [ValidateSet("AbortRetryIgnore", "OK", "OKCancel", "RetryCancel", "YesNo", "YesNoCancel")]
-    $buttons = "OKCancel",
+    $Buttons = "OKCancel",
 
     [ValidateSet("Button1","Button2","Button3")]
     $DefaultButton = "Button1",
@@ -144,7 +142,7 @@ function Show-OSDPopup
     [switch] $ShutdownOnOk,
     [switch] $RestartOnOk
   )
-  $FName = $MyInvocation.MyCommand.Name ; $FName
+  $FName = $MyInvocation.MyCommand.Name
   "$FName`: Testing if in WindowsPE. If so, hide the OSD Progress window."
   if ( Get-OSDVariable -Name '_SMSTSInWinPE' )
   {
@@ -187,33 +185,33 @@ function Show-OSDPopup
   }
 }
 
-function Test-OSDMinRAM
+function Test-OSDMinRAMGB
 {
   param (
-    [int]$MinRAMinGB
+    [int]$MinRAMGB
   )
-  $FName = $MyInvocation.MyCommand.Name ; $FName
-  (Get-CimInstance -ClassName CIM_PhysicalMemory).Capacity / 1GB -ge $MinRAMinGB
+  $FName = $MyInvocation.MyCommand.Name
+  (Get-CimInstance -ClassName CIM_PhysicalMemory).Capacity / 1GB -ge $MinRAMGB
 }
 
-function Test-OSDMinCPUinGHz
+function Test-OSDMinCPUGHz
 {
   param (
-    [int]$MinCPUGhz = 4
+    [int]$MinCPUGHz = 4
   )
-  $FName = $MyInvocation.MyCommand.Name ; $FName
+  $FName = $MyInvocation.MyCommand.Name
   $CPUMax = (Get-CimInstance -ClassName CIM_Processor).MaxClockSpeed | Sort-Object -Descending | Select-Object -First 1
-  [math]::Floor($CPUMax / 1024) -ge $MinCPUGhz
+  [math]::Floor($CPUMax / 1024) -ge $MinCPUGHz
 }
 
-function Test-OSDMinDiskinGB
+function Test-OSDMinDiskGB
 {
   param (
-    [int]$MinDiskinGB = 128
+    [int]$MinDiskGB = 128
   )
-  $FName = $MyInvocation.MyCommand.Name ; $FName
+  $FName = $MyInvocation.MyCommand.Name
   [bool]$(Get-PhysicalDisk | Where-Object { 
-      $_.Size -ge "$($MinDiskinGB)GB" -and 
+      $_.Size -ge "$($MinDiskGB)GB" -and 
       $_.SpindleSpeed -eq 0 -and 
       $_.BusType -notin "USB",7 
     })
@@ -226,4 +224,4 @@ function Test-OSDMinDiskinGB
 $TSEnv = New-Object -ComObject Microsoft.SMS.TSEnvironment
 $TSEnv.value('PSOSDTModule') = $PSOSDTModule
 # Output to X: RAMDrive in WinPE for script development with Import-Module cmdlet
-$PSOSDTModule | Out-File x:\PSOSDT.psm1
+try { $PSOSDTModule | Out-File x:\PSOSDT.psm1 -Force } finally {}

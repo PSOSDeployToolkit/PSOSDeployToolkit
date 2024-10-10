@@ -5,7 +5,6 @@ Invoke-Expression -Command $PSOSDTModule
 
 #MAIN
 
-helloOSD
 Get-OSDVariable -Name 'OSDComputerName'
 Get-OSDVariable -Name '_SMSTSPackageName'
 Set-OSDVariable -Name 'MyVar' -Value 'MyValue'
@@ -13,6 +12,9 @@ Get-OSDVariable -Name 'MyVar'
 Get-OSDComputerSystem
 $Manufacturer
 $Model
+
+Show-OSDPopup -title "Message Title" -message "Message body text" -type Exclamation -buttons AbortRetryIgnore -DefaultButton Button2 -ShutdownOnAbort
+
 Get-OSDVariable -Name '_SMSTSModel'
 if ( $Manufacturer -in 'hp','hewlett packard' ) { Test-HPBIOSWMIInterface }
 
