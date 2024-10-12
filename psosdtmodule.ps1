@@ -1,8 +1,47 @@
 $PSOSDTModule = @'
 
+<#
+ Usefull default Task Sequence Variables
+ REF: https://learn.microsoft.com/en-us/mem/configmgr/osd/understand/task-sequence-variables
+ _SMSTSInWinPE
+_SMSTSLaunchMode
+_SMSTSLogPath
+_SMSTSMachineName
+_SMSTSMake
+_SMSTSMDataPath
+_SMSTSMediaType
+  BootMedia: Boot Media
+  FullMedia: Full Media
+  PXE: PXE
+  OEMMedia: Prestaged Media
+_SMSTSModel
+_SMSTSMP
+#>
+
 function Test-PSOSDT
 {
   "Hello from PSOSDT Module !"
+}
+
+function ConvertFrom-OSDBase64String
+{
+  param (
+    [string[]]$EncodedString
+  )
+  $FName = $MyInvocation.MyCommand.Name
+
+  $EncodedString | ForEach-Object { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) }
+}
+
+function ConvertTo-OSDBase64String
+{
+  param (
+    [string[]]$String
+  )
+  $String | ForEach-Object {
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($_)
+    [Convert]::ToBase64String($bytes)
+  }
 }
 
 function Get-OSDTSEnvironment
@@ -13,25 +52,51 @@ function Get-OSDTSEnvironment
 
 function Get-OSDVariable
 {
+  [CmdletBinding()]
   param (
     $Name,
     [switch]$OutputToPSVarOnly ,
-    [array]$SkipVars = ("AuthToken", "certificate", "certs", "clientconfig", 
-      "crypto", "PSModule", "password", "MediaPFX", "policy", 
-      "PowerShellScriptSourceScript", "reserved", "RootKey", 
-      "_SMSTSAuthenticator", "_SMSTSClientSelfProveToken", "_SMSTSDPAuthToken", 
-      "_SMSTSHTTP", "_SMSTSMediaApp", "_SMSTSPackageCacheLocation", 
-      "_SMSTSPKGFLAGS", "_SMSTSPkgHash", "_SMSTSPolicy", "_SMSTSSourceVersion", 
-      "_SMSTSTaskSequence", "_SMSTSRoot", "SvcPW", "_TSSub", "tasksequence", 
-      "UATTesters" )
+    [switch]$ValueOnly ,
+    [array]$SkipVars = (
+      'AuthToken',
+      'certificate',
+      'certs',
+      'clientconfig',
+      'crypto',
+      'PSModule',
+      'password',
+      'MediaPFX',
+      'policy',
+      'PowerShellScriptSourceScript',
+      'reserved',
+      'RootKey',
+      'SvcPW',
+      'tasksequence',
+      'UATTesters',
+      '_SMSTSAuthenticator',
+      '_SMSTSClientSelfProveToken',
+      '_SMSTSDPAuthToken',
+      '_SMSTSHTTP',
+      '_SMSTSMediaApp',
+      '_SMSTSPackageCacheLocation',
+      '_SMSTSPKGFLAGS',
+      '_SMSTSPkgHash',
+      '_SMSTSPolicy',
+      '_SMSTSSourceVersion',
+      '_SMSTSTaskSequence',
+      '_SMSTSRoot',
+      '_TSSub',
+      'LEAVE HERE TO PREVENT ACCIDENTAL LAST ENTRY WITH A COMMA'
+    )
   )
   $FName = $MyInvocation.MyCommand.Name
 
-  if ( ! $TSEnv )
-  { Get-OSDTSEnvironment 
+  if (! $TSEnv)
+  {
+    Get-OSDTSEnvironment 
   }
-
-  if ( ! $Name)
+  
+  if (! $Name)
   {
     $Name = $TSenv.GetVariables() 
   }
@@ -41,34 +106,43 @@ function Get-OSDVariable
     $output = $true
     foreach ($skipVar in $skipVars)
     {
-      if ( $var -like "*$skipVar*" )
+      if ($var -like "*$skipVar*")
       { 
         $output = $false
       }
     }
-      if ( $output ) {
-        $Value = $TSEnv.value("$var")
-          New-Variable -Name $var -Value $Value -Scope Global -Description 'PSOSDT' -ErrorAction SilentlyContinue -Force
-        if (! $OutputToPSVarOnly) {
+    if ($output)
+    {
+      $Value = $TSEnv.value("$var")
+      New-Variable -Name $var -Value $Value -Scope Global -Description 'PSOSDT' -ErrorAction SilentlyContinue -Force
+      if (! $OutputToPSVarOnly)
+      {
+        if ($ValueOnly)
+        {
           Get-Variable -Name $var -ValueOnly
+        } else
+        {
+          Get-Variable -Name $var
         }
       }
+    }
   }
 }
 
 function Set-OSDVariable
 {
+  [CmdletBinding()]
   param (
     [Parameter(Mandatory = $True)]$Name ,
     [Parameter(Mandatory = $True)]$Value
   )
   $FName = $MyInvocation.MyCommand.Name
-  if ( ! $TSEnv )
+  if (! $TSEnv)
   {
     Get-OSDTSEnvironment 
   }
   $TSEnv.value("$Name") = "$Value"
-  New-Variable -Name $Name -Value $Value -Scope Global
+  New-Variable -Name $Name -Value $Value -Scope Global -Force
 }
 
 function Get-OSDComputerSystem
@@ -80,19 +154,20 @@ function Get-OSDComputerSystem
   }
 }
 
-function Test-HPBIOSWMIInterface
+function Test-OSDHPBIOSWMIInterface
 {
   [CmdletBinding()]
   Param (
     $MaxWaitSeconds = 180
   ) 
+
   $FName = $MyInvocation.MyCommand.Name
   $int = 0
   $GWMIParms = @{
     'Namespace' = 'root/HP/InstrumentedBIOS'
     'ClassName' = 'HP_BIOSSettingInterface'
   } 
-  while ((!($HP_BIOSSettingInterface = Get-WmiObject @GWMIParms -ErrorAction SilentlyContinue)) -and $int -lt $MaxWaitSeconds )
+  while ((!($HP_BIOSSettingInterface = Get-WmiObject @GWMIParms -ErrorAction SilentlyContinue)) -and $int -lt $MaxWaitSeconds)
   { 
     "$FName`: Waiting up to $MaxWaitSeconds seconds for HP BIOS WMI interface: $int" 
     Start-Sleep -Seconds 1
@@ -127,7 +202,7 @@ function Show-OSDPopup
     [ValidateSet("AbortRetryIgnore", "OK", "OKCancel", "RetryCancel", "YesNo", "YesNoCancel")]
     $Buttons = "OKCancel",
 
-    [ValidateSet("Button1","Button2","Button3")]
+    [ValidateSet("Button1", "Button2", "Button3")]
     $DefaultButton = "Button1",
         
     [switch] $ShutdownOnAbort,
@@ -144,7 +219,7 @@ function Show-OSDPopup
   )
   $FName = $MyInvocation.MyCommand.Name
   "$FName`: Testing if in WindowsPE. If so, hide the OSD Progress window."
-  if ( Get-OSDVariable -Name '_SMSTSInWinPE' )
+  if (Get-OSDVariable -Name '_SMSTSInWinPE')
   {
     "$FName`: Is running in WinPE. Closing Task Sequence Progress Window if running."
         (New-Object -ComObject Microsoft.SMS.TsProgressUI).CloseProgressDialog() | Out-Null
@@ -152,7 +227,7 @@ function Show-OSDPopup
   "$FName`: Popup:$title;$message;$buttons"
   "$FName`: Display form and get user selection" | Write-Verbose
   [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null
-  $Result = [Windows.Forms.MessageBox]::Show($message, $title, [Windows.Forms.MessageBoxButtons]::$buttons ,[Windows.Forms.MessageBoxIcon]::$type ,[Windows.Forms.MessageBoxDefaultButton]::$DefaultButton )
+  $Result = [Windows.Forms.MessageBox]::Show($message, $title, [Windows.Forms.MessageBoxButtons]::$buttons , [Windows.Forms.MessageBoxIcon]::$type , [Windows.Forms.MessageBoxDefaultButton]::$DefaultButton)
 
   # Reboot or shutdown if needed or just return user result
   switch ($Result)
@@ -180,13 +255,15 @@ function Show-OSDPopup
       Start-Sleep -Seconds 60
     }
     Default
-    { RETURN $Result 
+    {
+      RETURN $Result 
     }
   }
 }
 
 function Test-OSDMinRAMGB
 {
+  [CmdletBinding()]
   param (
     [int]$MinRAMGB
   )
@@ -196,6 +273,7 @@ function Test-OSDMinRAMGB
 
 function Test-OSDMinCPUGHz
 {
+  [CmdletBinding()]
   param (
     [int]$MinCPUGHz = 4
   )
@@ -206,6 +284,7 @@ function Test-OSDMinCPUGHz
 
 function Test-OSDMinDiskGB
 {
+  [CmdletBinding()]
   param (
     [int]$MinDiskGB = 128
   )
@@ -213,10 +292,183 @@ function Test-OSDMinDiskGB
   [bool]$(Get-PhysicalDisk | Where-Object { 
       $_.Size -ge "$($MinDiskGB)GB" -and 
       $_.SpindleSpeed -eq 0 -and 
-      $_.BusType -notin "USB",7 
-    })
+      $_.BusType -notin "USB", 7 
+    }
+  )
 }
 
+function Test-OSDOnBattery
+{
+  [CmdletBinding()]
+  param ()
+  $FName = $MyInvocation.MyCommand.Name
+  ((Get-WmiObject WIN32_Battery) -and (Get-WmiObject WIN32_Battery).BatteryStatus -ne '2')
+}
+
+function Get-OSDOSDisk
+{
+  [CmdletBinding()]
+  param (
+    [ValidateSet('NVMe', 'SCSI', 'RAID', 'MMC')]
+    [String]$BusTypeP1 = 'NVMe',
+    [ValidateSet('NVMe', 'SCSI', 'RAID', 'MMC')]
+    [String]$BusTypeP2 ,
+    [ValidateSet('NVMe', 'SCSI', 'RAID', 'MMC')]
+    [String]$BusTypeP3 ,
+    $MinDiskSizeGB = 64 ,
+    [switch]$DeviceIDOnly,
+    [switch]$GetLargestSize
+  )
+  
+  $PhysicalDisk = Get-PhysicalDisk 
+
+  # Set sorting order of the disk capacity
+  if ($GetLargestSize)
+  {
+    $Params = @{ Descending = $True } 
+  } else
+  { 
+    $Params = @{ Descending = $false } 
+  }
+
+  # Add BusTypes in order or priority. Works even if one value is null
+  foreach ($BusType in $BusTypeP1, $BusTypeP2, $BusTypeP3)
+  {
+    $OSDisk = $PhysicalDisk | Where-Object { $_.BusType -eq $BusType -and $_.Size -ge "$($MinDiskSizeGB)GB" } | Sort-Object @Params -Property Size |  Select-Object -First 1 
+    if ($OSDisk)
+    { break 
+    } 
+  }
+
+  if ($DeviceIDOnly)
+  {
+    $OSDisk.DeviceId
+  } else
+  {
+    $OSDisk
+  }
+}
+
+function Test-OSDBootMediaImage
+{
+  [CmdletBinding()]
+  param ()
+  $FName = $MyInvocation.MyCommand.Name
+  $_SMSTSBootImageID = Get-OSDVariable -Name '_SMSTSBootImageID'
+  $_SMSTSBootMediaPackageID = Get-OSDVariable -Name '_SMSTSBootMediaPackageID'
+  "$FName`: Task Sequnece BootImageID: $_SMSTSBootImageID , Boot Media BootImageID: $_SMSTSBootMediaPackageID" | Write-Verbose
+  $_SMSTSBootImageID -eq $_SMSTSBootMediaPackageID
+}
+
+function Get-OSDChassisModelType
+{
+  param (
+    [switch]$OutputToPSVarOnly,
+    [switch]$TypeOnly,
+    [switch]$ModelOnly,
+    [switch]$ValueOnly
+  )
+  $FName = $MyInvocation.MyCommand.Name
+    
+  "$FName`: Setting default Chassis type values to false" | Write-Verbose
+  $Global:isLaptop = $false
+  $Global:isDesktop = $false
+  $Global:isServer = $false
+  $Global:isVM = $false
+    
+  $ChassisTypes = (Get-CimInstance -ClassName Win32_SystemEnclosure).ChassisTypes
+  $ChassisTypes | ForEach-Object {
+    switch ($_)
+    {
+      { $_ -in '8', '9', '10', '11', '12', '14', '18', '21', '30', '31', '32' }
+      {
+        $Global:isLaptop = $true
+        $type = 'isLaptop'
+        Set-OSDVariable -Name "isLaptop" -Value $true
+      }
+      { $_ -in '3', '4', '5', '6', '7', '13', '15', '16' }
+      {
+        $Global:isDesktop = $true
+        $type = 'isDesktop'
+        Set-OSDVariable -Name "isDesktop" -Value $true
+      }
+      { $_ -in '23' }
+      {
+        $Global:isServer = $true
+        $type = 'isServer'
+        Set-OSDVariable -Name "isServer" -Value $true
+      }
+      Default
+      { 
+        $type = 'isUknown'
+        "$FName`: Cannot determine if Laptop, Desktop or Server" | Write-warning 
+      }
+    }
+  }
+  $Model = (Get-CimInstance -ClassName Win32_ComputerSystem).Model
+  if ($Model -in 'VMware20,1', 'VMware7,1', 'VirtualBox', 'VMware Virtual Platform', 'Virtual Machine', 'Standard PC (Q35 + ICH9, 2009)')
+  {
+    $Global:isVM = $true
+    Set-OSDVariable -Name "isVM" -Value $true
+  }
+  if (! $OutputToPSVarOnly)
+  {
+    if ($TypeOnly)
+    {
+      if ($ValueOnly)
+      {
+        Get-Variable -Name type -ValueOnly
+      } else
+      {
+        Get-Variable -Name type
+      }
+    } elseif ($ModelOnly) {
+      if ($ValueOnly)
+      {
+        Get-Variable -Name Model -ValueOnly
+      } else
+      {
+        Get-Variable -Name Model
+      }
+    } else
+    {
+      Get-Variable -Name ChassisTypes, type, isLaptop, isDesktop, isServer, isVM, Model
+    }
+  }
+}
+
+function Test-OSDIsLaptop
+{
+  [CmdletBinding()]
+  param ()
+
+  Get-OSDChassisModelType -OutputToPSVarOnly
+  $isLaptop
+}
+function Test-OSDIsDesktop
+{
+  [CmdletBinding()]
+  param ()
+
+  Get-OSDChassisModelType -OutputToPSVarOnly
+  $isDesktop
+}
+function Test-OSDIsServer
+{
+  [CmdletBinding()]
+  param ()
+
+  Get-OSDChassisModelType -OutputToPSVarOnly
+  $isServer
+}
+function Test-OSDIsVM
+{
+  [CmdletBinding()]
+  param ()
+
+  Get-OSDChassisModelType -OutputToPSVarOnly
+  $isVM
+}
 '@
 
 
@@ -224,4 +476,8 @@ function Test-OSDMinDiskGB
 $TSEnv = New-Object -ComObject Microsoft.SMS.TSEnvironment
 $TSEnv.value('PSOSDTModule') = $PSOSDTModule
 # Output to X: RAMDrive in WinPE for script development with Import-Module cmdlet
-try { $PSOSDTModule | Out-File x:\PSOSDT.psm1 -Force } finally {}
+try
+{ $PSOSDTModule | Out-File x:\PSOSDT.psm1 -Force ; Import-Module x:\PSOSDT.psm1 -Force 
+} finally
+{
+}
