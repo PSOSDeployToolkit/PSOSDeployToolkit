@@ -87,6 +87,9 @@ function Get-OSDVariable {
       'LEAVE HERE TO PREVENT ACCIDENTAL LAST ENTRY WITH A COMMA'
     )
   )
+  $PSVarOutputDesc = 'PSOSDT'
+
+
   $FName = $MyInvocation.MyCommand.Name
 
   if (! $TSEnv) {
